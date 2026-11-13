@@ -1,0 +1,17 @@
+{
+  "name": "uno-server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --config ../wrangler.jsonc --port 8787",
+    "test": "tsx --test src/round.test.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261113.1",
+    "@types/node": "^24.19.2",
+    "typescript": "^7.0.2",
+    "wrangler": "^4.161.0",
+    "tsx": "^4.23.15"
+  }
+}

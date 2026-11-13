@@ -1,0 +1,6 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "types": ["node"] },
+  "include": ["src/round.ts", "src/bot.ts", "src/round.test.ts", "../shared"],
+  "exclude": []
+}

@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Đổi tên này nếu muốn link khác: https://<name>.<tài-khoản>.workers.dev
+  "name": "uno-web",
+  "main": "server/src/worker.ts",
+  "compatibility_date": "2026-11-01",
+
+  // Giao diện đã build (npm run build) + hình lá bài
+  "assets": {
+    "directory": "client/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    // Các đường dẫn này luôn chạy qua Worker, không trả về index.html
+    "run_worker_first": ["/ws", "/api/*", "/health"]
+  },
+
+  // Mỗi phòng chơi = 1 Durable Object
+  "durable_objects": {
+    "bindings": [{ "name": "ROOMS", "class_name": "RoomDO" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RoomDO"] }],
+
+  "observability": { "enabled": true }
+}

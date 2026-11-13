@@ -1,0 +1,19 @@
+{
+  "name": "uno-web",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "npm run build -w uno-client && concurrently -k -n worker,client -c blue,magenta \"npm run dev -w server\" \"npm run dev -w uno-client\"",
+    "build": "npm run build -w uno-client",
+    "deploy": "npm run build && wrangler deploy",
+    "test": "npm test -w server",
+    "typecheck": "npm run typecheck -w server && npm run typecheck -w uno-client"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.7"
+  }
+}
