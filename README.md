@@ -8,7 +8,6 @@ Web chơi UNO nhiều người theo thời gian thực, có animation và hiệu
 - Luật tuỳ chọn (chủ phòng bật/tắt trong phòng chờ, có sẵn chế độ **Cổ điển** và **Hỗn loạn**):
   - **Rút đến khi đánh được**: rút liên tục tới khi được lá hợp lệ, rồi bắt buộc đánh lá đó.
   - **7-0**: đánh 7 thì đổi cả bài với một người tự chọn; đánh 0 thì cả bàn chuyền bài theo chiều chơi.
-  - **Chặn ngang**: có lá giống hệt lá trên bàn thì đánh chen ngay, không cần tới lượt.
   - **Không về bằng lá chức năng**: lá cuối cùng phải là lá số.
   - Số lá chia (5/7/10) và điểm vô địch (200/500 hoặc không giới hạn).
 - Giới hạn thời gian mỗi lượt (15/30/60 giây hoặc không giới hạn). Hết giờ thì tự rút bài.
@@ -16,6 +15,7 @@ Web chơi UNO nhiều người theo thời gian thực, có animation và hiệu
 - Tính điểm qua nhiều ván, người đánh đầu xoay vòng sau mỗi ván.
 - Animation: chia bài, lá bay theo đường cong, +4 làm tối màn hình kèm vòng 4 màu và pháo giấy, +2 làm rung màn hình, dấu 🚫 khi bị cấm lượt, vòng xoay khi đổi chiều, sóng màu khi đổi màu, bộ đếm cộng dồn, chữ "UNO!" bung ra, pháo giấy khi thắng.
 - Âm thanh tổng hợp bằng Web Audio, có nút tắt. Có biểu cảm emoji.
+- Chat trong phòng: khung chat ở phòng chờ, trong ván mở bằng nút chat (có số tin chưa đọc); tin mới hiện bong bóng thoại ở ghế người gửi. Có câu chat nhanh, thông báo vào/rời phòng, người vào sau xem được 50 tin gần nhất.
 
 ## Cấu trúc
 ```

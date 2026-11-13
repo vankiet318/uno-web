@@ -1,6 +1,6 @@
 // Cloudflare Worker: phục vụ giao diện, cấp mã phòng, chuyển kết nối WebSocket vào Durable Object của phòng
 import { DurableObject } from 'cloudflare:workers';
-import { ROOM_CODE_ALPHABET, ROOM_CODE_RE, type AckRes, type ClientMsg, type ServerMsg } from '../../shared/protocol';
+import { CHAT_MAX_LEN, ROOM_CODE_ALPHABET, ROOM_CODE_RE, type AckRes, type ClientMsg, type ServerMsg } from '../../shared/protocol';
 import { COLORS, REACTIONS, type Color, type Settings } from '../../shared/types';
 import { GameError, type Round } from './round';
 import { randomId, Room, type Transport } from './room';
@@ -48,6 +48,7 @@ interface Conn {
   playerId?: string;
   lastSeen: number;
   lastReaction: number;
+  lastChat: number;
 }
 
 const HEARTBEAT_MS = 20_000;
@@ -99,7 +100,7 @@ export class RoomDO extends DurableObject<Env> {
     const [client, server] = [pair[0], pair[1]];
     server.accept();
     const id = crypto.randomUUID();
-    this.conns.set(id, { ws: server, lastSeen: Date.now(), lastReaction: 0 });
+    this.conns.set(id, { ws: server, lastSeen: Date.now(), lastReaction: 0, lastChat: 0 });
     this.startHeartbeat();
     this.cancelEmptyTimer();
 
@@ -213,6 +214,7 @@ export class RoomDO extends DurableObject<Env> {
       c.playerId = m.id;
       this.cancelEmptyTimer();
       room.broadcast([]);
+      room.sendChatHistory(connId);
       return room.code;
     }
 
@@ -274,6 +276,14 @@ export class RoomDO extends DurableObject<Env> {
       case 'game:catch':
         act((r, p) => r.catchUno(p, String(d.targetId)));
         return;
+      case 'chat': {
+        const text = String(d.text ?? '').replace(/\s+/g, ' ').trim().slice(0, CHAT_MAX_LEN);
+        if (!text) throw new GameError('Tin nhắn trống');
+        if (Date.now() - c.lastChat < 700) throw new GameError('Gửi chậm lại chút nhé');
+        c.lastChat = Date.now();
+        room.chat(pid, text);
+        return;
+      }
       case 'reaction': {
         const emoji = String(d.emoji);
         if (!REACTIONS.includes(emoji) || Date.now() - c.lastReaction < 600) return;

@@ -1,17 +1,16 @@
 import type { IconType } from 'react-icons';
-import { LuArrowLeftRight, LuBan, LuFlame, LuLayers, LuRepeat, LuScrollText, LuTimer, LuTrophy, LuZap, LuHand } from 'react-icons/lu';
+import { LuArrowLeftRight, LuBan, LuFlame, LuLayers, LuRepeat, LuScrollText, LuTimer, LuTrophy, LuHand } from 'react-icons/lu';
 import {
   CHAOS_SETTINGS, CLASSIC_SETTINGS, HAND_SIZES, TARGET_SCORES, TURN_SECONDS, type Settings,
 } from '@shared/types';
 import { actions } from '../net';
 
-type BoolKey = 'stacking' | 'drawUntilPlayable' | 'sevenZero' | 'jumpIn' | 'noActionFinish';
+type BoolKey = 'stacking' | 'drawUntilPlayable' | 'sevenZero' | 'noActionFinish';
 
 const TOGGLES: { key: BoolKey; icon: IconType; title: string; desc: string }[] = [
   { key: 'stacking', icon: LuLayers, title: 'Cộng dồn', desc: 'Chồng +2 lên +2, +4 lên +2/+4. Người cuối cùng ăn hết.' },
   { key: 'drawUntilPlayable', icon: LuRepeat, title: 'Rút đến khi đánh được', desc: 'Không có lá hợp lệ thì rút liên tục, được lá nào phải đánh lá đó.' },
   { key: 'sevenZero', icon: LuArrowLeftRight, title: 'Luật 7-0', desc: 'Đánh 7: đổi cả bài với 1 người. Đánh 0: cả bàn chuyền bài cho người kế.' },
-  { key: 'jumpIn', icon: LuZap, title: 'Chặn ngang', desc: 'Có lá giống hệt lá trên bàn (cùng màu, cùng số) thì đánh chen ngay, không cần tới lượt.' },
   { key: 'noActionFinish', icon: LuBan, title: 'Không về bằng lá chức năng', desc: 'Lá cuối cùng phải là lá số.' },
 ];
 

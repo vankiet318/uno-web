@@ -30,8 +30,6 @@ export interface Settings {
   drawUntilPlayable: boolean;
   /** Đánh 7: đổi bài với 1 người. Đánh 0: cả bàn chuyền bài theo chiều chơi */
   sevenZero: boolean;
-  /** Có lá giống hệt lá trên bàn thì được đánh chen, không cần tới lượt */
-  jumpIn: boolean;
   /** Lá cuối cùng phải là lá số */
   noActionFinish: boolean;
   /** Số lá chia mỗi người */
@@ -45,7 +43,6 @@ export const CLASSIC_SETTINGS: Settings = {
   turnSeconds: 30,
   drawUntilPlayable: false,
   sevenZero: false,
-  jumpIn: false,
   noActionFinish: false,
   handSize: 7,
   targetScore: 0,
@@ -56,7 +53,6 @@ export const CHAOS_SETTINGS: Settings = {
   turnSeconds: 30,
   drawUntilPlayable: true,
   sevenZero: true,
-  jumpIn: true,
   noActionFinish: true,
   handSize: 7,
   targetScore: 0,
@@ -126,7 +122,6 @@ export type GameEvent =
   | { type: 'timeout'; playerId: string }
   | { type: 'win'; playerId: string; points: number }
   | { type: 'reaction'; playerId: string; emoji: string }
-  | { type: 'jumpIn'; playerId: string }
   | { type: 'swap'; a: string; b: string }
   | { type: 'rotate'; direction: 1 | -1 };
 
@@ -162,11 +157,6 @@ export const isNumber = (card: Card) => /^\d$/.test(card.value);
 /** Luật 'không về bằng lá chức năng': lá cuối không được là lá chức năng */
 export function finishBlocked(card: Card, handCount: number, settings: Settings): boolean {
   return settings.noActionFinish && handCount === 1 && !isNumber(card);
-}
-
-/** Luật 'chặn ngang': lá giống hệt lá trên bàn (cùng màu, cùng giá trị) */
-export function canJumpIn(card: Card, top: Card | null, pendingDraw: number, settings: Settings): boolean {
-  return settings.jumpIn && !!top && pendingDraw === 0 && card.color !== 'wild' && card.color === top.color && card.value === top.value;
 }
 
 /** Lá 7 cần chọn người đổi bài (khi còn bài sau khi đánh) */

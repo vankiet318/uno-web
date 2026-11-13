@@ -52,9 +52,3 @@ export function chooseBotMove(round: Round, botId: string): BotMove {
   return playMove(round, botId, options[0]);
 }
 
-/** Bot (chưa tới lượt) có lá giống hệt để chặn ngang không */
-export function findJumpIn(round: Round, botId: string): BotMove | null {
-  if (round.current.id === botId || round.winnerId) return null;
-  const card = round.player(botId).hand.find((c) => round.playable(c, botId));
-  return card ? playMove(round, botId, card) : null;
-}

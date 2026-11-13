@@ -1,6 +1,7 @@
 // Kết nối realtime tới Durable Object của phòng qua WebSocket gốc của trình duyệt
 import type { AckRes, ClientMsg, ServerMsg } from '@shared/protocol';
 import type { Card, Color, Settings } from '@shared/types';
+import { clearChat, onChat } from './chat';
 import { animateLocalPlay, handleEvents, handlePayload, resetBoard } from './director';
 import { toast, useStore } from './store';
 
@@ -86,12 +87,12 @@ function onServerMsg(msg: ServerMsg) {
     case 'events':
       handleEvents(msg.events);
       break;
+    case 'chat':
+      onChat(msg.messages, !!msg.history);
+      break;
     case 'kicked':
       toast('Bạn đã bị mời ra khỏi phòng');
-      disconnect();
-      setUrlRoom(null);
-      resetBoard();
-      useStore.setState({ state: null });
+      exitRoom();
       break;
     case 'pong':
       break;
@@ -160,11 +161,17 @@ async function rejoin() {
   if (!res.ok) {
     // Phòng không còn (ví dụ mọi người đã rời quá lâu)
     toast(res.error);
-    disconnect();
-    setUrlRoom(null);
-    resetBoard();
-    useStore.setState({ state: null });
+    exitRoom();
   }
+}
+
+/** Thoát hẳn khỏi phòng phía client: ngắt kết nối, xoá bàn chơi và chat, về màn hình chính */
+function exitRoom() {
+  disconnect();
+  setUrlRoom(null);
+  resetBoard();
+  clearChat();
+  useStore.setState({ state: null });
 }
 
 function disconnect() {
@@ -239,10 +246,7 @@ export async function joinRoom(code: string, name: string): Promise<AckRes> {
 
 export async function leaveRoom() {
   await request('room:leave');
-  disconnect();
-  setUrlRoom(null);
-  resetBoard();
-  useStore.setState({ state: null });
+  exitRoom();
 }
 
 export const actions = {
@@ -263,6 +267,7 @@ export const actions = {
   kick: (playerId: string) => act('room:kick', { playerId }),
   settings: (s: Partial<Settings>) => act('room:settings', s),
   reaction: (emoji: string) => request('reaction', { emoji }),
+  chat: (text: string) => act('chat', { text }),
 };
 
 // Mở link mời / F5 khi đang trong phòng → tự vào lại (nếu đã có tên)

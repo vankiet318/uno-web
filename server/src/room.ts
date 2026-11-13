@@ -1,9 +1,9 @@
-import type { ServerMsg } from '../../shared/protocol';
+import { CHAT_HISTORY, type ChatMsg, type ServerMsg } from '../../shared/protocol';
 import {
   DEFAULT_SETTINGS, HAND_SIZES, MAX_PLAYERS, TARGET_SCORES, TURN_SECONDS,
   type Card, type ClientState, type Color, type GameEvent, type Phase, type Settings, type StatePayload,
 } from '../../shared/types';
-import { chooseBotMove, findJumpIn, type BotMove } from './bot';
+import { chooseBotMove, type BotMove } from './bot';
 import { GameError, Round } from './round';
 
 /** Cách gửi tin tới một kết nối (Durable Object cài đặt bằng WebSocket) */
@@ -41,7 +41,6 @@ function animationTime(events: GameEvent[]): number {
     else if (e.type === 'draw' && e.penalty) t += Math.min(e.count, 10) * 120;
     else if (e.type === 'draw' && e.count > 1) t += Math.min(e.count, 12) * 90;
     else if (e.type === 'swap' || e.type === 'rotate') t += 1100;
-    else if (e.type === 'jumpIn') t += 500;
   }
   return t;
 }
@@ -58,8 +57,9 @@ export class Room {
   matchWinnerId: string | null = null;
   private turnTimer: ReturnType<typeof setTimeout> | null = null;
   private catchTimer: ReturnType<typeof setTimeout> | null = null;
-  private jumpTimer: ReturnType<typeof setTimeout> | null = null;
   lastActive = Date.now();
+  private chatLog: ChatMsg[] = [];
+  private chatSeq = 0;
 
   constructor(public code: string, private transport: Transport) {}
 
@@ -86,12 +86,14 @@ export class Room {
     m = { id: randomId(), token, name: name || 'Người chơi', isBot: false, sockets: new Set([socketId]), score: 0 };
     this.members.push(m);
     if (!this.hostId || !this.members.some((x) => x.id === this.hostId)) this.hostId = m.id;
+    this.systemChat(`${m.name} đã vào phòng`);
     return m;
   }
 
   /** Rời phòng hẳn. Đang chơi → chuyển thành bot để ván tiếp tục */
   leave(id: string) {
     const m = this.member(id);
+    this.systemChat(this.phase === 'lobby' ? `${m.name} đã rời phòng` : `${m.name} đã rời phòng, máy chơi thay`);
     if (this.phase === 'lobby') {
       this.members = this.members.filter((x) => x.id !== id);
     } else {
@@ -128,11 +130,35 @@ export class Room {
     const m = this.member(id);
     for (const sid of m.sockets) this.transport.kick(sid);
     this.members = this.members.filter((x) => x.id !== id);
+    this.systemChat(`${m.name} đã bị mời ra khỏi phòng`);
+  }
+
+  // ---- Chat ----
+
+  /** Gửi tin nhắn của người chơi tới cả phòng */
+  chat(playerId: string, text: string) {
+    const m = this.member(playerId);
+    this.pushChat({ id: ++this.chatSeq, playerId, name: m.name, text, at: Date.now() });
+  }
+
+  private systemChat(text: string) {
+    this.pushChat({ id: ++this.chatSeq, playerId: null, name: '', text, at: Date.now() });
+  }
+
+  private pushChat(msg: ChatMsg) {
+    this.chatLog.push(msg);
+    if (this.chatLog.length > CHAT_HISTORY) this.chatLog.shift();
+    for (const x of this.members) for (const sid of x.sockets) this.transport.send(sid, { t: 'chat', messages: [msg] });
+  }
+
+  /** Gửi toàn bộ lịch sử chat cho một kết nối (khi mới vào hoặc vào lại) */
+  sendChatHistory(connId: string) {
+    this.transport.send(connId, { t: 'chat', messages: this.chatLog, history: true });
   }
 
   updateSettings(s: Partial<Settings>) {
     if (this.phase === 'playing') throw new GameError('Không đổi luật khi đang chơi');
-    for (const k of ['stacking', 'drawUntilPlayable', 'sevenZero', 'jumpIn', 'noActionFinish'] as const) {
+    for (const k of ['stacking', 'drawUntilPlayable', 'sevenZero', 'noActionFinish'] as const) {
       if (typeof s[k] === 'boolean') this.settings[k] = s[k];
     }
     if (typeof s.turnSeconds === 'number' && TURN_SECONDS.includes(s.turnSeconds)) this.settings.turnSeconds = s.turnSeconds;
@@ -200,8 +226,7 @@ export class Room {
   private clearTimers() {
     if (this.turnTimer) clearTimeout(this.turnTimer);
     if (this.catchTimer) clearTimeout(this.catchTimer);
-    if (this.jumpTimer) clearTimeout(this.jumpTimer);
-    this.turnTimer = this.catchTimer = this.jumpTimer = null;
+    this.turnTimer = this.catchTimer = null;
     this.turnEndsAt = null;
   }
 
@@ -238,18 +263,6 @@ export class Room {
         this.catchTimer = setTimeout(() => {
           this.safe(() => this.act(catcher.id, (rr) => rr.catchUno(catcher.id, target)));
         }, 1800 + Math.random() * 2500);
-      }
-    }
-
-    // Bot canh chặn ngang (không phải lượt mình nhưng có lá giống hệt)
-    if (this.settings.jumpIn) {
-      for (const m of this.members) {
-        if (!m.isBot) continue;
-        const move = findJumpIn(r, m.id);
-        if (move && Math.random() < 0.7) {
-          this.jumpTimer = setTimeout(() => this.safe(() => this.doBotMove(m.id, move)), animDelay + 700 + Math.random() * 1200);
-          break;
-        }
       }
     }
   }

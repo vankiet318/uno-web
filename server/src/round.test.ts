@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { CHAOS_SETTINGS, CLASSIC_SETTINGS, type Card, type CardValue, type Color, type Settings } from '../../shared/types';
-import { chooseBotMove, findJumpIn } from './bot';
+import { chooseBotMove } from './bot';
 import { createDeck, Round } from './round';
 
 const S: Settings = { ...CLASSIC_SETTINGS, stacking: true, turnSeconds: 0 };
@@ -275,21 +275,6 @@ test('7-0: đánh 0 cả bàn chuyền bài theo chiều chơi', () => {
   assert.equal(r.players[1].hand[0].value, '1');
 });
 
-test('chặn ngang: lá giống hệt được đánh khi chưa tới lượt', () => {
-  const r = setup([[card('blue', '1'), card('blue', '2')], [card('blue', '3')], [card('red', '5'), card('red', '9')]], card('red', '5'), {
-    ...S,
-    jumpIn: true,
-  });
-  const ev = r.play('p2', r.players[2].hand[0].id);
-  assert.ok(ev.some((e) => e.type === 'jumpIn' && e.playerId === 'p2'));
-  assert.equal(r.current.id, 'p0'); // lượt tiếp theo tính từ người chặn
-});
-
-test('chặn ngang: lá không giống hệt thì không được', () => {
-  const r = setup([[card('blue', '1')], [card('blue', '3')], [card('red', '6'), card('red', '9')]], card('red', '5'), { ...S, jumpIn: true });
-  assert.throws(() => r.play('p2', r.players[2].hand[0].id), /Chưa tới lượt/);
-});
-
 test('không về bằng lá chức năng', () => {
   const r = setup([[card('red', 'skip')], [card('blue', '3')]], card('red', '5'), { ...S, noActionFinish: true });
   assert.throws(() => r.play('p0', r.players[0].hand[0].id), /lá chức năng/);
@@ -305,18 +290,11 @@ test('bot chơi hết ván với luật Hỗn loạn không lỗi', () => {
     const r = new Round(['a', 'b', 'c', 'd'], { ...CHAOS_SETTINGS });
     let steps = 0;
     while (!r.winnerId && steps < 3000) {
-      // thỉnh thoảng có bot chặn ngang
-      const jumper = r.players.find((p) => p.id !== r.current.id && findJumpIn(r, p.id));
-      if (jumper && Math.random() < 0.3) {
-        const m = findJumpIn(r, jumper.id)!;
-        if (m.type === 'play') r.play(jumper.id, m.cardId, m.color, m.uno, m.swapWith);
-      } else {
-        const id = r.current.id;
-        const m = chooseBotMove(r, id);
-        if (m.type === 'play') r.play(id, m.cardId, m.color, m.uno, m.swapWith);
-        else if (m.type === 'draw') r.draw(id);
-        else r.pass(id);
-      }
+      const id = r.current.id;
+      const m = chooseBotMove(r, id);
+      if (m.type === 'play') r.play(id, m.cardId, m.color, m.uno, m.swapWith);
+      else if (m.type === 'draw') r.draw(id);
+      else r.pass(id);
       steps++;
     }
     const total = r.players.reduce((s, p) => s + p.hand.length, 0) + r.drawPile.length + r.discard.length;

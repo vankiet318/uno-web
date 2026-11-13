@@ -446,15 +446,6 @@ function runTimeline(events: GameEvent[], state: ClientState, fromRects: Map<str
         break;
       }
 
-      case 'jumpIn': {
-        at(t, () => {
-          sfx.stack();
-          addEffect({ kind: 'bigText', text: 'CHẶN NGANG!', sub: name(e.playerId), color: 'yellow', size: 0.6 }, 1000);
-        });
-        t += 350;
-        break;
-      }
-
       case 'swap':
       case 'rotate': {
         // Bài bay giữa các ghế

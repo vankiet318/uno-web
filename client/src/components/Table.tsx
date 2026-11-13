@@ -1,15 +1,17 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { memo, useEffect, useState } from 'react';
-import { LuCheck, LuLayers, LuSkipForward, LuSmilePlus } from 'react-icons/lu';
+import { LuCheck, LuLayers, LuMessageCircle, LuSkipForward, LuSmilePlus, LuX } from 'react-icons/lu';
+import { setChatOpen } from '../chat';
 import { isWild, needsSwapTarget, REACTIONS, type Card, type Color } from '@shared/types';
 import { HEX } from '../director';
 import { actions } from '../net';
 import { reg } from '../registry';
-import { playKind } from '../rules';
+import { canPlayNow } from '../rules';
 import { useStore } from '../store';
 import { CardView } from './CardView';
 import { ColorPicker } from './ColorPicker';
 import { Hand } from './Hand';
+import { ChatBox } from './ChatBox';
 import { SwapPicker } from './SwapPicker';
 import { Avatar, Seat, TimerRing } from './Seat';
 
@@ -44,6 +46,8 @@ export function Table() {
   const [picking, setPicking] = useState<Card | null>(null);
   const [swapping, setSwapping] = useState<Card | null>(null);
   const [showReactions, setShowReactions] = useState(false);
+  const chatOpen = useStore((s) => s.chatOpen);
+  const chatUnread = useStore((s) => s.chatUnread);
 
   const me = state.players.find((p) => p.id === state.me)!;
   const meIdx = state.players.findIndex((p) => p.id === state.me);
@@ -52,8 +56,7 @@ export function Table() {
   const turnPlayer = state.players.find((p) => p.id === state.turnPlayerId);
   const color: Color | null = state.currentColor;
   const glow = color ? HEX[color] : '#888';
-  const hasPlayable = myTurn && state.hand.some((c) => playKind(state, c) === 'turn');
-  const canJump = !myTurn && state.hand.some((c) => playKind(state, c) === 'jump');
+  const hasPlayable = state.hand.some((c) => canPlayNow(state, c));
   const forcedPlay = state.settings.drawUntilPlayable;
   // Không có lá đánh được → server tự rút; chỉ cho bấm rút khi có lá mà vẫn muốn rút
   const autoDrawing = myTurn && !hasPlayable && !state.hasDrawn;
@@ -79,8 +82,7 @@ export function Table() {
     if (state.pendingDraw > 0) status = `Chồng thêm +2/+4 hoặc rút ${state.pendingDraw} lá!`;
     else if (state.hasDrawn) status = forcedPlay ? 'Đánh lá vừa rút!' : 'Đánh lá vừa rút hoặc bỏ lượt';
     else status = hasPlayable ? 'Tới lượt bạn!' : forcedPlay ? 'Đang rút đến khi đánh được…' : 'Không có lá hợp lệ — đang tự rút…';
-  } else if (canJump) status = 'Bạn có lá giống hệt — chặn ngang ngay!';
-  else status = `Lượt của ${turnPlayer?.name ?? '...'}`;
+  } else status = `Lượt của ${turnPlayer?.name ?? '...'}`;
 
   return (
     <div className="table-screen">
@@ -143,14 +145,14 @@ export function Table() {
           <DiscardPile color={color} />
         </div>
 
-        <motion.div className={`status ${myTurn ? 'mine' : ''} ${canJump ? 'jump' : ''}`} key={status} initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
+        <motion.div className={`status ${myTurn ? 'mine' : ''}`} key={status} initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
           {status}
         </motion.div>
       </div>
 
       <div className={`me-bar ${myTurn ? 'turn' : ''}`}>
         <div className="me-info">
-          <div className="seat-avatar">
+          <div className="seat-avatar" ref={reg('me-avatar')}>
             {myTurn && <TimerRing size={50} />}
             <Avatar p={me} size={40} />
           </div>
@@ -207,8 +209,40 @@ export function Table() {
               )}
             </AnimatePresence>
           </div>
+          <button className="btn icon chat-toggle" onClick={() => setChatOpen(!chatOpen)} title="Chat" aria-label="Chat">
+            <LuMessageCircle />
+            <AnimatePresence>
+              {chatUnread > 0 && (
+                <motion.span className="unread" key={chatUnread} initial={{ scale: 0 }} animate={{ scale: [0, 1.4, 1] }} exit={{ scale: 0 }}>
+                  {chatUnread > 9 ? '9+' : chatUnread}
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </button>
         </div>
       </div>
+
+      <AnimatePresence>
+        {chatOpen && (
+          <motion.div
+            className="panel chat-drawer"
+            initial={{ opacity: 0, y: 30, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 30, scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+          >
+            <div className="chat-head">
+              <h3>
+                <LuMessageCircle /> Chat
+              </h3>
+              <button className="btn icon small" onClick={() => setChatOpen(false)} aria-label="Đóng chat">
+                <LuX />
+              </button>
+            </div>
+            <ChatBox autoFocus />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <Hand onPlay={play} />
 

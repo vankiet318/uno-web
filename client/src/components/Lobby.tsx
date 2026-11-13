@@ -1,9 +1,10 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { LuBot, LuCrown, LuLink, LuPlay, LuWifiOff, LuX } from 'react-icons/lu';
+import { LuBot, LuCrown, LuLink, LuMessageCircle, LuPlay, LuWifiOff, LuX } from 'react-icons/lu';
 import { MAX_PLAYERS } from '@shared/types';
 import { actions } from '../net';
 import { toast, useStore } from '../store';
 import { CardView } from './CardView';
+import { ChatBox } from './ChatBox';
 import { RulesPanel } from './RulesPanel';
 import { Avatar } from './Seat';
 
@@ -106,6 +107,13 @@ export function Lobby() {
             <p className="muted">Chờ chủ phòng bắt đầu…</p>
           </div>
         )}
+      </motion.div>
+
+      <motion.div className="panel chat-panel" initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }}>
+        <h3>
+          <LuMessageCircle /> Chat
+        </h3>
+        <ChatBox />
       </motion.div>
     </div>
   );

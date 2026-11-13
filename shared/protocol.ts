@@ -3,6 +3,18 @@ import type { GameEvent, StatePayload } from './types';
 
 export type AckRes = { ok: true; code?: string } | { ok: false; error: string };
 
+export interface ChatMsg {
+  id: number;
+  /** null = tin hệ thống (vào/rời phòng) */
+  playerId: string | null;
+  name: string;
+  text: string;
+  at: number;
+}
+
+export const CHAT_MAX_LEN = 200;
+export const CHAT_HISTORY = 50;
+
 /** Trình duyệt → server */
 export type ClientMsg =
   /** Yêu cầu có phản hồi (giống emit + ack của Socket.IO) */
@@ -15,6 +27,8 @@ export type ServerMsg =
   | { t: 'ack'; id: number; res: AckRes }
   | { t: 'state'; payload: StatePayload }
   | { t: 'events'; events: GameEvent[] }
+  /** history = true: danh sách đầy đủ khi mới vào phòng, thay thế lịch sử cũ */
+  | { t: 'chat'; messages: ChatMsg[]; history?: boolean }
   | { t: 'kicked' }
   | { t: 'pong' };
 

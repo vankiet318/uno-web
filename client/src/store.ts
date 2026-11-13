@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { ChatMsg } from '@shared/protocol';
 import type { Card, ClientState, Color } from '@shared/types';
 
 export interface Pt {
@@ -13,7 +14,8 @@ export type Effect =
   | { id: number; kind: 'reverse'; direction: 1 | -1 }
   | { id: number; kind: 'ripple'; at: Pt; color: Color }
   | { id: number; kind: 'seatText'; at: Pt; text: string; tone: 'uno' | 'penalty' | 'info' }
-  | { id: number; kind: 'emoji'; at: Pt; emoji: string };
+  | { id: number; kind: 'emoji'; at: Pt; emoji: string }
+  | { id: number; kind: 'bubble'; at: Pt; text: string; owner: string };
 
 type DistributiveOmit<T, K extends keyof any> = T extends any ? Omit<T, K> : never;
 export type EffectInput = DistributiveOmit<Effect, 'id'>;
@@ -38,6 +40,10 @@ interface Store {
   incoming: Record<string, number>;
   toasts: { id: number; text: string }[];
   muted: boolean;
+  chat: ChatMsg[];
+  /** Số tin chưa đọc (khi đang trong ván và khung chat đóng) */
+  chatUnread: number;
+  chatOpen: boolean;
 }
 
 function readMuted(): boolean {
@@ -58,6 +64,9 @@ export const useStore = create<Store>(() => ({
   incoming: {},
   toasts: [],
   muted: readMuted(),
+  chat: [],
+  chatUnread: 0,
+  chatOpen: false,
 }));
 
 let seq = 1;

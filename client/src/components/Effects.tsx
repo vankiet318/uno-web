@@ -125,8 +125,28 @@ function Emoji({ e }: { e: Extract<Effect, { kind: 'emoji' }> }) {
   );
 }
 
+/** Bong bóng thoại chat phía trên ghế người gửi */
+function Bubble({ e }: { e: Extract<Effect, { kind: 'bubble' }> }) {
+  // Giữ bong bóng trong màn hình khi ghế nằm sát mép
+  const x = Math.min(Math.max(e.at.x, 110), innerWidth - 110);
+  return (
+    <motion.div
+      className="fx-bubble"
+      style={{ left: x, top: e.at.y, '--tail': `${e.at.x - x}px` } as React.CSSProperties}
+      initial={{ opacity: 0, scale: 0.6, y: 10 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.8, y: -10 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 22 }}
+    >
+      {e.text}
+    </motion.div>
+  );
+}
+
 function render(e: Effect) {
   switch (e.kind) {
+    case 'bubble':
+      return <Bubble key={e.id} e={e} />;
     case 'bigText':
       return <BigText key={e.id} e={e} />;
     case 'wild4':

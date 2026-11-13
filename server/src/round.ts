@@ -1,5 +1,5 @@
 import {
-  canJumpIn, canPlay, cardPoints, COLORS, finishBlocked, isWild, needsSwapTarget,
+  canPlay, cardPoints, COLORS, finishBlocked, isWild, needsSwapTarget,
   type Card, type CardValue, type Color, type GameEvent, type PendingType, type Settings,
 } from '../../shared/types';
 
@@ -145,11 +145,11 @@ export class Round {
     return got;
   }
 
-  /** Lá này người chơi có đánh được lúc này không (gồm cả chặn ngang khi chưa tới lượt) */
+  /** Lá này người chơi có đánh được lúc này không (chỉ khi đang tới lượt) */
   playable(card: Card, playerId: string = this.current.id): boolean {
     const p = this.player(playerId);
     if (finishBlocked(card, p.hand.length, this.settings)) return false;
-    if (playerId !== this.current.id) return canJumpIn(card, this.top, this.pendingDraw, this.settings);
+    if (playerId !== this.current.id) return false;
     return canPlay(card, this.top, this.color, this.pendingDraw, this.pendingType, this.settings.stacking);
   }
 
@@ -159,21 +159,16 @@ export class Round {
   }
 
   play(id: string, cardId: string, chosen?: Color, sayUno = false, swapWith?: string): GameEvent[] {
-    if (this.winnerId) throw new GameError('Ván đã kết thúc');
-    const p = this.player(id);
+    this.assertTurn(id);
+    const p = this.current;
     const ci = p.hand.findIndex((c) => c.id === cardId);
     if (ci < 0) throw new GameError('Bạn không có lá này');
     const card = p.hand[ci];
-    const jumping = id !== this.current.id;
 
     // ---- Kiểm tra hợp lệ (chưa thay đổi gì) ----
-    if (jumping) {
-      if (!this.playable(card, id)) throw new GameError('Chưa tới lượt bạn');
-    } else {
-      if (this.hasDrawn && this.drawnCardId !== cardId) throw new GameError('Chỉ được đánh lá vừa rút');
-      if (!this.playable(card, id)) {
-        throw new GameError(finishBlocked(card, p.hand.length, this.settings) ? 'Không được về bằng lá chức năng' : 'Không đánh được lá này');
-      }
+    if (this.hasDrawn && this.drawnCardId !== cardId) throw new GameError('Chỉ được đánh lá vừa rút');
+    if (!this.playable(card, id)) {
+      throw new GameError(finishBlocked(card, p.hand.length, this.settings) ? 'Không được về bằng lá chức năng' : 'Không đánh được lá này');
     }
     if (isWild(card) && (!chosen || !COLORS.includes(chosen))) throw new GameError('Hãy chọn màu');
     const swapTarget = needsSwapTarget(card, p.hand.length - 1, this.settings)
@@ -183,12 +178,6 @@ export class Round {
 
     // ---- Thực hiện ----
     const events: GameEvent[] = [];
-    if (jumping) {
-      this.turn = this.players.indexOf(p);
-      this.hasDrawn = false;
-      this.drawnCardId = null;
-      events.push({ type: 'jumpIn', playerId: id });
-    }
     this.clearVulnerable(id);
     p.hand.splice(ci, 1);
     this.discard.push(card);

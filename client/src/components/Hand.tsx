@@ -1,7 +1,7 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { COLORS, type Card } from '@shared/types';
 import { cardWidth, reg } from '../registry';
-import { playKind } from '../rules';
+import { canPlayNow } from '../rules';
 import { useStore } from '../store';
 import { CardView } from './CardView';
 
@@ -52,15 +52,14 @@ export function Hand({ onPlay }: Props) {
     <div className={`hand ${myTurn ? 'my-turn' : ''}`} ref={ref}>
       <div className="hand-row" ref={reg('hand')}>
         {cards.map((c, i) => {
-          const kind = playKind(state, c);
-          const ok = kind !== null;
+          const ok = canPlayNow(state, c);
           const off = i - (n - 1) / 2;
           const y = ok ? -18 : Math.abs(off) * Math.min(4, 40 / n);
           return (
             <div
               key={c.id}
               ref={reg(`card:${c.id}`)}
-              className={`hand-card ${ok ? 'playable' : ''} ${kind === 'jump' ? 'jumpable' : ''} ${myTurn && !ok ? 'dim' : ''} ${c.id === state.drawnCardId ? 'just-drawn' : ''} ${hidden.has(c.id) ? 'hidden' : ''}`}
+              className={`hand-card ${ok ? 'playable' : ''} ${myTurn && !ok ? 'dim' : ''} ${c.id === state.drawnCardId ? 'just-drawn' : ''} ${hidden.has(c.id) ? 'hidden' : ''}`}
               style={
                 {
                   '--x': `${off * step}px`,
