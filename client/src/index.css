@@ -1595,6 +1595,95 @@ label.setting {
   color: transparent !important;
 }
 
+/* ---------- Người xem (vào giữa ván) ---------- */
+.spectators {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  translate: -50% 0;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100% - 24px);
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.4);
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.spectator-name {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text);
+}
+
+.spectator-kick {
+  display: inline-grid;
+  place-items: center;
+  margin-left: 2px;
+  padding: 1px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.spectator-kick:hover {
+  color: #fff;
+  background: rgba(255, 59, 71, 0.6);
+}
+
+.spectate-banner {
+  height: calc(var(--ch) + 46px);
+  margin: 0 12px calc(10px + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 12px 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.spectate-ico {
+  font-size: 38px;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.spectate-banner div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.spectate-banner b {
+  font-size: 18px;
+}
+
+.spectate-banner span {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.waiting-join {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  margin: -4px 0 14px;
+}
+
 /* ---------- Chat ---------- */
 .lobby .chat-panel {
   max-width: 380px;

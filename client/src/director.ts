@@ -25,12 +25,57 @@ let drawChain = { pid: '', n: 0, at: 0 };
 
 const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-export function resetBoard() {
+// ---- Bộ hẹn giờ & animation đang chờ: ghi lại để huỷ được khi tab bị ẩn ----
+const timers = new Set<ReturnType<typeof setTimeout>>();
+const anims = new Set<Animation>();
+/** Tăng mỗi lần huỷ toàn bộ → các callback cũ (requestAnimationFrame) tự bỏ qua */
+let generation = 0;
+
+/** setTimeout có ghi lại để huỷ được */
+function later(fn: () => void, ms: number) {
+  const id = setTimeout(() => {
+    timers.delete(id);
+    fn();
+  }, ms);
+  timers.add(id);
+}
+
+/** Huỷ mọi animation và bộ hẹn giờ đang chờ */
+function cancelAll() {
+  generation++;
+  for (const t of timers) clearTimeout(t);
+  timers.clear();
+  for (const a of anims) a.cancel();
+  anims.clear();
+  document.getElementById('fly-layer')?.replaceChildren();
   busyUntil = 0;
   localPlays.clear();
-  document.getElementById('fly-layer')?.replaceChildren();
+  exchangeIds = [];
+  drawChain = { pid: '', n: 0, at: 0 };
+}
+
+/**
+ * Đồng bộ ngay bàn chơi về trạng thái mới nhất, không animation.
+ * Dùng khi tab bị ẩn: trình duyệt dừng requestAnimationFrame và làm chậm setTimeout,
+ * nếu vẫn xếp hàng animation thì lúc quay lại mọi hiệu ứng sẽ dồn ra cùng lúc.
+ */
+function snapBoard(state: ClientState | null) {
+  cancelAll();
+  const cur = useStore.getState().discard;
+  const top = state && state.phase !== 'lobby' ? state.topCard : null;
+  const discard = !top ? [] : cur[cur.length - 1]?.card.id === top.id ? cur : [{ card: top, key: nextId(), rot: 0, dx: 0, dy: 0 }];
+  useStore.setState({ discard, hiddenCards: new Set(), incoming: {}, effects: [] });
+}
+
+export function resetBoard() {
+  cancelAll();
   useStore.setState({ discard: [], hiddenCards: new Set(), incoming: {}, effects: [] });
 }
+
+// Tab vừa bị ẩn → dừng mọi animation đang dở, giữ bàn chơi đúng trạng thái
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) snapBoard(useStore.getState().state);
+});
 
 const center = (r: DOMRect): Pt => ({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
 
@@ -85,13 +130,15 @@ function fly(o: FlyOpts, onLand?: () => void) {
       ],
       { duration, fill: 'forwards' },
     );
+    anims.add(anim);
     anim.onfinish = () => {
+      anims.delete(anim);
       onLand?.();
       // Gỡ ở frame sau để lá thật kịp hiện ra, tránh nháy
       requestAnimationFrame(() => el.remove());
     };
   };
-  if (delay > 0) setTimeout(start, delay);
+  if (delay > 0) later(start, delay);
   else start();
 }
 
@@ -198,6 +245,11 @@ export function animateLocalPlay(card: Card, color: Color | undefined): () => vo
 }
 
 export function handlePayload({ state, events }: StatePayload) {
+  if (document.hidden) {
+    useStore.setState({ state, clockOffset: state.serverNow - Date.now() });
+    snapBoard(state);
+    return;
+  }
   const st = useStore.getState();
   const prev = st.state;
   const me = state.me;
@@ -246,13 +298,16 @@ export function handlePayload({ state, events }: StatePayload) {
 
   useStore.setState({ state, clockOffset: state.serverNow - Date.now(), hiddenCards: hidden, incoming, discard });
 
-  // Đợi React vẽ xong để đo vị trí đích
-  requestAnimationFrame(() => runTimeline(events, state, fromRects, prev));
+  // Đợi React vẽ xong để đo vị trí đích (bỏ qua nếu đã bị huỷ do tab ẩn trong lúc chờ)
+  const gen = generation;
+  requestAnimationFrame(() => {
+    if (gen === generation && !document.hidden) runTimeline(events, state, fromRects, prev);
+  });
 }
 
 export function handleEvents(events: GameEvent[]) {
   const state = useStore.getState().state;
-  if (!state) return;
+  if (!state || document.hidden) return;
   for (const e of events) {
     if (e.type === 'reaction') {
       sfx.pop();
@@ -266,7 +321,7 @@ function runTimeline(events: GameEvent[], state: ClientState, fromRects: Map<str
   const name = (id: string) => (id === me ? 'Bạn' : (state.players.find((p) => p.id === id)?.name ?? '?'));
   const now = performance.now();
   let t = Math.min(Math.max(0, busyUntil - now), 2500);
-  const at = (ms: number, fn: () => void) => (ms <= 0 ? fn() : setTimeout(fn, ms));
+  const at = (ms: number, fn: () => void) => (ms <= 0 ? fn() : later(fn, ms));
   const sScale = seatScale();
 
   for (const e of events) {
@@ -439,7 +494,7 @@ function runTimeline(events: GameEvent[], state: ClientState, fromRects: Map<str
           const colors = Object.values(HEX);
           burst(colors, { x: innerWidth * 0.2, y: innerHeight * 0.6 }, 120);
           burst(colors, { x: innerWidth * 0.8, y: innerHeight * 0.6 }, 120);
-          setTimeout(() => burst(colors, screenCenter(), 160), 400);
+          later(() => burst(colors, screenCenter(), 160), 400);
           addEffect({ kind: 'bigText', text: e.playerId === me ? 'BẠN THẮNG!' : `${name(e.playerId)} thắng!`, sub: `+${e.points} điểm`, color: 'wild', size: 0.8 }, 2100);
         });
         t += 1800;

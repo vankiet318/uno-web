@@ -20,6 +20,8 @@ export interface Member {
   isBot: boolean;
   sockets: Set<string>;
   score: number;
+  /** Vào phòng khi ván đang diễn ra: chỉ xem, được chia bài từ ván sau */
+  spectator: boolean;
 }
 
 const BOT_NAMES = ['Bot Mèo', 'Bot Cún', 'Bot Gấu', 'Bot Thỏ', 'Bot Cáo', 'Bot Hổ', 'Bot Vịt', 'Bot Cá'];
@@ -81,20 +83,22 @@ export class Room {
       if (name) m.name = name;
       return m;
     }
-    if (this.phase !== 'lobby') throw new GameError('Ván đang diễn ra, chờ ván sau nhé');
     if (this.members.length >= MAX_PLAYERS) throw new GameError('Phòng đã đầy');
-    m = { id: randomId(), token, name: name || 'Người chơi', isBot: false, sockets: new Set([socketId]), score: 0 };
+    // Vào giữa ván → thành người xem, được chia bài từ ván sau
+    const spectator = this.phase !== 'lobby';
+    m = { id: randomId(), token, name: name || 'Người chơi', isBot: false, sockets: new Set([socketId]), score: 0, spectator };
     this.members.push(m);
     if (!this.hostId || !this.members.some((x) => x.id === this.hostId)) this.hostId = m.id;
-    this.systemChat(`${m.name} đã vào phòng`);
+    this.systemChat(spectator ? `${m.name} vào xem, sẽ chơi từ ván sau` : `${m.name} đã vào phòng`);
     return m;
   }
 
-  /** Rời phòng hẳn. Đang chơi → chuyển thành bot để ván tiếp tục */
+  /** Rời phòng hẳn. Đang chơi → chuyển thành bot để ván tiếp tục (người xem thì xoá luôn) */
   leave(id: string) {
     const m = this.member(id);
-    this.systemChat(this.phase === 'lobby' ? `${m.name} đã rời phòng` : `${m.name} đã rời phòng, máy chơi thay`);
-    if (this.phase === 'lobby') {
+    const inRound = this.phase !== 'lobby' && !m.spectator;
+    this.systemChat(inRound ? `${m.name} đã rời phòng, máy chơi thay` : `${m.name} đã rời phòng`);
+    if (!inRound) {
       this.members = this.members.filter((x) => x.id !== id);
     } else {
       m.isBot = true;
@@ -121,13 +125,13 @@ export class Room {
     if (this.members.length >= MAX_PLAYERS) throw new GameError('Phòng đã đầy');
     const used = new Set(this.members.map((m) => m.name));
     const name = BOT_NAMES.find((n) => !used.has(n)) ?? `Bot ${this.members.length + 1}`;
-    this.members.push({ id: randomId(), token: randomId(24), name, isBot: true, sockets: new Set(), score: 0 });
+    this.members.push({ id: randomId(), token: randomId(24), name, isBot: true, sockets: new Set(), score: 0, spectator: false });
   }
 
   kick(id: string) {
-    if (this.phase !== 'lobby') throw new GameError('Chỉ mời ra trong phòng chờ');
     if (id === this.hostId) throw new GameError('Không thể tự mời mình ra');
     const m = this.member(id);
+    if (this.phase !== 'lobby' && !m.spectator) throw new GameError('Chỉ mời ra người đang xem hoặc trong phòng chờ');
     for (const sid of m.sockets) this.transport.kick(sid);
     this.members = this.members.filter((x) => x.id !== id);
     this.systemChat(`${m.name} đã bị mời ra khỏi phòng`);
@@ -172,6 +176,8 @@ export class Room {
       for (const m of this.members) m.score = 0;
       this.matchWinnerId = null;
     }
+    // Người xem từ ván trước được vào chơi
+    for (const m of this.members) m.spectator = false;
     // Người đánh đầu xoay vòng qua từng ván
     this.round = new Round(this.members.map((m) => m.id), { ...this.settings }, Math.random, this.roundNumber);
     this.roundNumber++;
@@ -186,12 +192,14 @@ export class Room {
     this.round = null;
     // Bot thay người đã rời thì bỏ đi
     this.members = this.members.filter((m) => !m.isBot || !m.name.endsWith('(máy)'));
+    for (const m of this.members) m.spectator = false;
     this.broadcast([]);
   }
 
   /** Thực hiện một hành động trong ván rồi gửi state cho mọi người */
   act(playerId: string, fn: (r: Round) => GameEvent[]) {
     if (this.phase !== 'playing' || !this.round) throw new GameError('Ván chưa bắt đầu');
+    if (!this.round.players.some((p) => p.id === playerId)) throw new GameError('Bạn đang xem, chờ ván sau nhé');
     const events = fn(this.round);
     this.afterAction(events);
   }
@@ -302,6 +310,7 @@ export class Room {
         connected: x.isBot || x.sockets.size > 0,
         isBot: x.isBot,
         isHost: x.id === this.hostId,
+        spectator: x.spectator,
         score: x.score,
         unoVulnerable: r?.unoVulnerable === x.id,
       })),

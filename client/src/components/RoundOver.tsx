@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
-import { LuPlay, LuTrophy, LuUsers } from 'react-icons/lu';
+import { LuEye, LuPlay, LuTrophy, LuUsers } from 'react-icons/lu';
 import { animationRemaining } from '../director';
 import { actions } from '../net';
 import { useStore } from '../store';
@@ -21,7 +21,8 @@ export function RoundOver() {
   const amHost = state.players.find((p) => p.id === state.me)?.isHost;
   const winner = state.players.find((p) => p.id === state.winnerId);
   const champion = state.players.find((p) => p.id === state.matchWinnerId);
-  const ranked = [...state.players].sort((a, b) => b.score - a.score);
+  const ranked = state.players.filter((p) => !p.spectator).sort((a, b) => b.score - a.score);
+  const waiting = state.players.filter((p) => p.spectator);
   const handOf = (id: string) => state.lastHands.find((h) => h.playerId === id)?.cards ?? [];
 
   return (
@@ -67,6 +68,11 @@ export function RoundOver() {
             </motion.div>
           ))}
         </div>
+        {waiting.length > 0 && (
+          <p className="waiting-join">
+            <LuEye /> Sẽ vào chơi từ ván sau: <b>{waiting.map((p) => (p.id === state.me ? 'Bạn' : p.name)).join(', ')}</b>
+          </p>
+        )}
         {amHost ? (
           <div className="row">
             <button className="btn ghost" onClick={() => actions.lobby()}>

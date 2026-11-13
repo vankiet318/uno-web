@@ -12,6 +12,8 @@ Web chơi UNO nhiều người theo thời gian thực, có animation và hiệu
   - Số lá chia (5/7/10) và điểm vô địch (200/500 hoặc không giới hạn).
 - Giới hạn thời gian mỗi lượt (15/30/60 giây hoặc không giới hạn). Hết giờ thì tự rút bài.
 - F5 hoặc rớt mạng thì tự vào lại đúng ghế. Người mất kết nối được máy đánh thay để ván không bị kẹt.
+- Vào phòng khi ván đang diễn ra: thành **người xem** (thấy bàn chơi realtime, chat được), tự động được chia bài từ ván sau. Chủ phòng có thể mời người xem ra.
+- Chuyển tab / khoá màn hình: không dồn hiệu ứng khi quay lại; tới lượt mình thì tiêu đề tab nhấp nháy "Tới lượt bạn!".
 - Tính điểm qua nhiều ván, người đánh đầu xoay vòng sau mỗi ván.
 - Animation: chia bài, lá bay theo đường cong, +4 làm tối màn hình kèm vòng 4 màu và pháo giấy, +2 làm rung màn hình, dấu 🚫 khi bị cấm lượt, vòng xoay khi đổi chiều, sóng màu khi đổi màu, bộ đếm cộng dồn, chữ "UNO!" bung ra, pháo giấy khi thắng.
 - Âm thanh tổng hợp bằng Web Audio, có nút tắt. Có biểu cảm emoji.

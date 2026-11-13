@@ -78,6 +78,8 @@ export interface PublicPlayer {
   score: number;
   /** Đang có 1 lá mà chưa hô UNO — có thể bị bắt */
   unoVulnerable: boolean;
+  /** Vào giữa ván: chỉ xem, được chia bài từ ván sau */
+  spectator: boolean;
 }
 
 export interface ClientState {

@@ -22,7 +22,8 @@ export function onChat(messages: ChatMsg[], history: boolean) {
       sfx.pop();
       if (inGame && !st.chatOpen) unread++;
     }
-    if (inGame) showBubble(m.playerId, m.text, m.playerId === me);
+    // Tab đang ẩn thì không hiện bong bóng (tránh dồn hiệu ứng khi quay lại); tin vẫn nằm trong khung chat
+    if (inGame && !document.hidden) showBubble(m.playerId, m.text, m.playerId === me);
   }
 
   useStore.setState((s) => ({ chat: [...s.chat, ...messages].slice(-100), chatUnread: s.chatUnread + unread }));

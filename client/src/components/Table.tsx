@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { memo, useEffect, useState } from 'react';
-import { LuCheck, LuLayers, LuMessageCircle, LuSkipForward, LuSmilePlus, LuX } from 'react-icons/lu';
+import { LuCheck, LuEye, LuLayers, LuMessageCircle, LuSkipForward, LuSmilePlus, LuX } from 'react-icons/lu';
 import { setChatOpen } from '../chat';
 import { isWild, needsSwapTarget, REACTIONS, type Card, type Color } from '@shared/types';
 import { HEX } from '../director';
@@ -51,7 +51,9 @@ export function Table() {
 
   const me = state.players.find((p) => p.id === state.me)!;
   const meIdx = state.players.findIndex((p) => p.id === state.me);
-  const others = [...state.players.slice(meIdx + 1), ...state.players.slice(0, meIdx)];
+  // Ghế trên bàn: chỉ người đang chơi (người xem không có ghế)
+  const others = [...state.players.slice(meIdx + 1), ...state.players.slice(0, meIdx)].filter((p) => !p.spectator);
+  const spectators = state.players.filter((p) => p.spectator);
   const myTurn = state.phase === 'playing' && state.turnPlayerId === state.me;
   const turnPlayer = state.players.find((p) => p.id === state.turnPlayerId);
   const color: Color | null = state.currentColor;
@@ -82,11 +84,27 @@ export function Table() {
     if (state.pendingDraw > 0) status = `Chồng thêm +2/+4 hoặc rút ${state.pendingDraw} lá!`;
     else if (state.hasDrawn) status = forcedPlay ? 'Đánh lá vừa rút!' : 'Đánh lá vừa rút hoặc bỏ lượt';
     else status = hasPlayable ? 'Tới lượt bạn!' : forcedPlay ? 'Đang rút đến khi đánh được…' : 'Không có lá hợp lệ — đang tự rút…';
-  } else status = `Lượt của ${turnPlayer?.name ?? '...'}`;
+  } else status = me.spectator ? `Bạn đang xem · Lượt của ${turnPlayer?.name ?? '...'}` : `Lượt của ${turnPlayer?.name ?? '...'}`;
 
   return (
     <div className="table-screen">
       <div className="table" style={{ '--glow': glow } as React.CSSProperties}>
+        {spectators.length > 0 && (
+          <div className="spectators" title="Sẽ được chia bài từ ván sau">
+            <LuEye /> Đang xem:
+            {spectators.map((p, i) => (
+              <span key={p.id} className="spectator-name">
+                {p.id === state.me ? 'Bạn' : p.name}
+                {me.isHost && p.id !== state.me && (
+                  <button className="spectator-kick" onClick={() => actions.kick(p.id)} title={`Mời ${p.name} ra`} aria-label={`Mời ${p.name} ra`}>
+                    <LuX />
+                  </button>
+                )}
+                {i < spectators.length - 1 && ','}
+              </span>
+            ))}
+          </div>
+        )}
         {others.map((p, i) => (
           <Seat
             key={p.id}
@@ -158,7 +176,7 @@ export function Table() {
           </div>
           <div>
             <div className="me-name">{me.name}</div>
-            <div className="seat-score">{me.score} điểm</div>
+            <div className="seat-score">{me.spectator ? 'Đang xem' : `${me.score} điểm`}</div>
           </div>
         </div>
 
@@ -244,7 +262,17 @@ export function Table() {
         )}
       </AnimatePresence>
 
-      <Hand onPlay={play} />
+      {me.spectator ? (
+        <motion.div className="spectate-banner" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <LuEye className="spectate-ico" />
+          <div>
+            <b>Bạn đang xem ván này</b>
+            <span>Bạn sẽ được chia bài từ ván sau. Trong lúc chờ, cứ chat thoải mái nhé!</span>
+          </div>
+        </motion.div>
+      ) : (
+        <Hand onPlay={play} />
+      )}
 
       <AnimatePresence>
         {swapping && (

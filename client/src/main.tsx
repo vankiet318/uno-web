@@ -4,6 +4,7 @@ import App from './App';
 import { preloadCards } from './cardHtml';
 import './index.css';
 import './net';
+import './tabAlert';
 
 preloadCards();
 

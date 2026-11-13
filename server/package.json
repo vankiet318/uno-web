@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev --config ../wrangler.jsonc --port 8787",
-    "test": "tsx --test src/round.test.ts",
+    "test": "tsx --test src/round.test.ts src/room.test.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json"
   },
   "devDependencies": {
